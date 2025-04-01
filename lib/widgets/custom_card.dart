@@ -5,6 +5,7 @@ class CustomCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final bool usePrimaryGradient;
   final double elevation;
+  final double? height;
 
   const CustomCard({
     super.key,
@@ -12,6 +13,7 @@ class CustomCard extends StatelessWidget {
     this.padding,
     this.usePrimaryGradient = false,
     this.elevation = 4,
+    this.height,
   });
 
   @override
@@ -24,6 +26,7 @@ class CustomCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
+        height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(

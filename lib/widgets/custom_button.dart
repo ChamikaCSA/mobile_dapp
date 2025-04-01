@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class LoadingButton extends StatelessWidget {
+class CustomButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final String text;
@@ -10,7 +10,7 @@ class LoadingButton extends StatelessWidget {
   final double? width;
   final double height;
 
-  const LoadingButton({
+  const CustomButton({
     super.key,
     required this.onPressed,
     required this.isLoading,

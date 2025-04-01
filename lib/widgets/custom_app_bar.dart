@@ -30,7 +30,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         color: colorScheme.onPrimary,
       ),
       actions: actions,
-      expandedHeight: 200,
+      expandedHeight: 140,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(

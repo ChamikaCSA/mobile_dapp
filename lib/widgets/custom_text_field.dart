@@ -7,6 +7,7 @@ class CustomTextField extends StatelessWidget {
   final String? validationMessage;
   final VoidCallback? onPaste;
   final String? Function(String)? validator;
+  final bool obscureText;
 
   const CustomTextField({
     super.key,
@@ -16,6 +17,7 @@ class CustomTextField extends StatelessWidget {
     this.validationMessage,
     this.onPaste,
     this.validator,
+    this.obscureText = false,
   });
 
   @override
@@ -27,6 +29,7 @@ class CustomTextField extends StatelessWidget {
       children: [
         TextField(
           controller: controller,
+          obscureText: obscureText,
           decoration: InputDecoration(
             hintText: hintText,
             border: OutlineInputBorder(
