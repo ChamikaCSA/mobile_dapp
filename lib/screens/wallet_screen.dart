@@ -6,7 +6,6 @@ import 'package:mobile_dapp/widgets/custom_card.dart';
 import 'package:mobile_dapp/widgets/custom_text_field.dart';
 import 'package:mobile_dapp/widgets/error_card.dart';
 import 'package:mobile_dapp/widgets/custom_button.dart';
-import 'package:mobile_dapp/screens/wallet_details_screen.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -97,13 +96,14 @@ class _WalletScreenState extends State<WalletScreen>
         _privateKeyController.clear();
       });
       if (mounted) {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => WalletDetailsScreen(
-              address: address,
-            ),
-          ),
+          '/wallet-details',
+          arguments: {
+            'address': address,
+            'privateKey': null,
+            'isNewWallet': false,
+          },
         );
       }
     } catch (e) {
@@ -137,14 +137,14 @@ class _WalletScreenState extends State<WalletScreen>
         _privateKeyController.clear();
       });
       if (mounted) {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => WalletDetailsScreen(
-              address: address,
-              privateKey: privateKey,
-            ),
-          ),
+          '/wallet-details',
+          arguments: {
+            'address': address,
+            'privateKey': privateKey,
+            'isNewWallet': false,
+          },
         );
       }
     } catch (e) {
@@ -169,15 +169,14 @@ class _WalletScreenState extends State<WalletScreen>
         _privateKeyController.clear();
       });
       if (mounted) {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => WalletDetailsScreen(
-              address: wallet['address']!,
-              privateKey: wallet['privateKey'],
-              isNewWallet: true,
-            ),
-          ),
+          '/wallet-details',
+          arguments: {
+            'address': wallet['address']!,
+            'privateKey': wallet['privateKey'],
+            'isNewWallet': true,
+          },
         );
       }
     } catch (e) {

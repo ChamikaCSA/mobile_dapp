@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/wallet_screen.dart';
+import 'screens/wallet_details_screen.dart';
+import 'utils/page_route.dart';
 
 void main() {
   runApp(const MainApp());
@@ -26,7 +28,23 @@ class MainApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WalletScreen(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        if (settings.name == '/') {
+          return CustomPageRoute(child: const WalletScreen());
+        }
+        if (settings.name == '/wallet-details') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return CustomPageRoute(
+            child: WalletDetailsScreen(
+              address: args['address'] as String,
+              privateKey: args['privateKey'] as String?,
+              isNewWallet: args['isNewWallet'] as bool? ?? false,
+            ),
+          );
+        }
+        return null;
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
+import 'package:mobile_dapp/utils/dialog_transition.dart';
 import 'dart:async';
 
 class PrivateKeyDialog extends StatefulWidget {
@@ -15,13 +16,15 @@ class PrivateKeyDialog extends StatefulWidget {
   State<PrivateKeyDialog> createState() => _PrivateKeyDialogState();
 }
 
-class _PrivateKeyDialogState extends State<PrivateKeyDialog> with SingleTickerProviderStateMixin {
+class _PrivateKeyDialogState extends State<PrivateKeyDialog> with TickerProviderStateMixin {
   bool _isPrivateKeyRevealed = false;
   bool _isHoldingButton = false;
   double _holdProgress = 0.0;
   Timer? _holdTimer;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _dialogController;
+  late Animation<double> _dialogAnimation;
 
   @override
   void initState() {
@@ -37,12 +40,25 @@ class _PrivateKeyDialogState extends State<PrivateKeyDialog> with SingleTickerPr
         curve: Curves.easeInOut,
       ),
     );
+
+    _dialogController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _dialogAnimation = CurvedAnimation(
+      parent: _dialogController,
+      curve: Curves.easeInOut,
+    );
+
+    _dialogController.forward();
   }
 
   @override
   void dispose() {
     _holdTimer?.cancel();
     _pulseController.dispose();
+    _dialogController.dispose();
     super.dispose();
   }
 
@@ -101,218 +117,235 @@ class _PrivateKeyDialogState extends State<PrivateKeyDialog> with SingleTickerPr
     ClipboardUtils.copyToClipboard(context, widget.privateKey);
   }
 
+  Future<void> _closeDialog() async {
+    await _dialogController.reverse();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Dialog(
-      child: CustomCard(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return WillPopScope(
+      onWillPop: () async {
+        await _closeDialog();
+        return false;
+      },
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        child: CustomDialogTransition(
+          animation: _dialogAnimation,
+          child: CustomCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.key,
-                      color: colorScheme.primary,
-                      size: 24,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.key,
+                          color: colorScheme.primary,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Private Key',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Private Key',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: colorScheme.onSurface),
+                      onPressed: _closeDialog,
+                      tooltip: 'Close',
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.close, color: colorScheme.onSurface),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: 'Close',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (!_isPrivateKeyRevealed) ...[
-              Text(
-                'Hold the button below to reveal your private key. Make sure you are in a private location and no one can see your screen.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: colorScheme.onSurface,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTapDown: (_) => _startHolding(),
-                onTapUp: (_) => _stopHolding(),
-                onTapCancel: () => _stopHolding(),
-                child: AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _isHoldingButton ? 1.0 : _pulseAnimation.value,
-                      child: Container(
-                        width: double.infinity,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colorScheme.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            if (_isHoldingButton)
-                              Positioned.fill(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: CustomPaint(
-                                    painter: _ProgressPainter(
-                                      progress: _holdProgress,
-                                      color: colorScheme.onPrimary,
-                                    ),
-                                  ),
+                const SizedBox(height: 16),
+                if (!_isPrivateKeyRevealed) ...[
+                  Text(
+                    'Hold the button below to reveal your private key. Make sure you are in a private location and no one can see your screen.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: colorScheme.onSurface,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTapDown: (_) => _startHolding(),
+                    onTapUp: (_) => _stopHolding(),
+                    onTapCancel: () => _stopHolding(),
+                    child: AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _isHoldingButton ? 1.0 : _pulseAnimation.value,
+                          child: Container(
+                            width: double.infinity,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                            Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (_isHoldingButton)
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          colorScheme.onPrimary,
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                if (_isHoldingButton)
+                                  Positioned.fill(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: CustomPaint(
+                                        painter: _ProgressPainter(
+                                          progress: _holdProgress,
+                                          color: colorScheme.onPrimary,
                                         ),
                                       ),
                                     ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _isHoldingButton ? 'Revealing...' : 'Hold to Reveal Private Key',
-                                    style: TextStyle(
-                                      color: colorScheme.onPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
                                   ),
-                                ],
-                              ),
+                                Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (_isHoldingButton)
+                                        SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              colorScheme.onPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _isHoldingButton ? 'Revealing...' : 'Hold to Reveal Private Key',
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.privateKey,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                              height: 1.5,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.privateKey,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: colorScheme.onSurfaceVariant,
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                          height: 1.5,
+                        const SizedBox(width: 12),
+                        IconButton(
+                          icon: Icon(Icons.copy, color: colorScheme.onSurfaceVariant),
+                          onPressed: _copyPrivateKey,
+                          tooltip: 'Copy private key',
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      icon: Icon(Icons.copy, color: colorScheme.onSurfaceVariant),
-                      onPressed: _copyPrivateKey,
-                      tooltip: 'Copy private key',
-                      padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: colorScheme.error,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Never share your private key with anyone.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colorScheme.error,
-                        fontWeight: FontWeight.bold,
-                        height: 1.4,
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(height: 16),
+                  Row(
                     children: [
                       Icon(
-                        Icons.check_circle_outline,
-                        color: colorScheme.onPrimary,
+                        Icons.warning_amber_rounded,
+                        color: colorScheme.error,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'I have saved my private key',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimary,
+                      Expanded(
+                        child: Text(
+                          'Never share your private key with anyone.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
-          ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _closeDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            color: colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'I have saved my private key',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
