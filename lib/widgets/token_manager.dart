@@ -3,9 +3,9 @@ import 'package:mobile_dapp/services/token_service.dart';
 import 'package:mobile_dapp/models/token_model.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
 import 'package:mobile_dapp/widgets/custom_text_field.dart';
-import 'package:mobile_dapp/widgets/error_card.dart';
 import 'package:mobile_dapp/widgets/custom_button.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
+import 'package:mobile_dapp/widgets/custom_snackbar.dart';
 import 'dart:math';
 
 class TokenManager extends StatefulWidget {
@@ -28,7 +28,6 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
   bool _isTokenAddressValid = false;
   final List<TokenModel> _tokens = [];
   bool _isLoadingToken = false;
-  String _tokenErrorMessage = '';
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
   late AnimationController _expandController;
@@ -88,15 +87,18 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
     final tokenAddress = _tokenAddressController.text.trim();
 
     if (!_isTokenAddressValid) {
-      setState(() {
-        _tokenErrorMessage = 'Invalid token contract address';
-      });
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Invalid token contract address',
+          isError: true,
+        );
+      }
       return;
     }
 
     setState(() {
       _isLoadingToken = true;
-      _tokenErrorMessage = '';
     });
 
     try {
@@ -122,9 +124,15 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
       _slideController.forward();
     } catch (e) {
       setState(() {
-        _tokenErrorMessage = e.toString();
         _isLoadingToken = false;
       });
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
     }
   }
 
@@ -248,14 +256,6 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
             ),
           ),
         ),
-        if (_tokenErrorMessage.isNotEmpty)
-          FadeTransition(
-            opacity: widget.animation,
-            child: ErrorCard(
-              message: _tokenErrorMessage,
-              animation: widget.animation,
-            ),
-          ),
         if (_tokens.isNotEmpty) ...[
           const SizedBox(height: 16),
           FadeTransition(

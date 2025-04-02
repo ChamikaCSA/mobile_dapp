@@ -20,14 +20,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         title,
         style: TextStyle(
-          color: colorScheme.onPrimary,
+          color: colorScheme.primary,
           fontWeight: FontWeight.bold,
           fontSize: 28,
         ),
       ),
-      backgroundColor: colorScheme.primary,
+      backgroundColor: colorScheme.surface,
       iconTheme: IconThemeData(
-        color: colorScheme.onPrimary,
+        color: colorScheme.primary,
       ),
       actions: actions,
       expandedHeight: 140,
@@ -38,7 +38,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                colorScheme.primary,
+                colorScheme.surface,
                 colorScheme.primaryContainer,
               ],
             ),
@@ -47,7 +47,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Icon(
               icon,
               size: 80,
-              color: colorScheme.onPrimary,
+              color: colorScheme.primary,
             ),
           ),
         ),

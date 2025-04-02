@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:mobile_dapp/services/wallet_service.dart';
 import 'package:mobile_dapp/widgets/custom_app_bar.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
-import 'package:mobile_dapp/widgets/error_card.dart';
 import 'package:mobile_dapp/widgets/private_key_dialog.dart';
 import 'package:mobile_dapp/widgets/token_manager.dart';
+import 'package:mobile_dapp/widgets/wallet_card.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
+import 'package:mobile_dapp/widgets/custom_snackbar.dart';
 import 'dart:async';
 
 class WalletDetailsScreen extends StatefulWidget {
@@ -29,7 +30,6 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
   final WalletService _walletService = WalletService();
   String _balance = '';
   bool _isLoading = false;
-  String _errorMessage = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -64,7 +64,6 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
   Future<void> _getBalance() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
     });
 
     try {
@@ -75,10 +74,16 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
         _balance = '';
         _isLoading = false;
       });
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
     }
   }
 
@@ -183,141 +188,11 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: CustomCard(
-                      usePrimaryGradient: true,
-                      height: 240,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.primaryContainer
-                                          .withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Sepolia',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color:
-                                                colorScheme.onPrimaryContainer,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Wallet Balance',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                icon: _isLoading
-                                    ? SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: colorScheme.onPrimaryContainer,
-                                        ),
-                                      )
-                                    : Icon(Icons.refresh,
-                                        color: colorScheme.onPrimaryContainer),
-                                onPressed: _getBalance,
-                                tooltip: 'Refresh balance',
-                                iconSize: 24,
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Center(
-                            child: Column(
-                              children: [
-                                Text(
-                                  _balance,
-                                  style: TextStyle(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'SepoliaETH',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onPrimaryContainer
-                                        .withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 16,
-                                  color: colorScheme.onPrimaryContainer
-                                      .withOpacity(0.7),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Last updated: ${DateTime.now().toString().substring(0, 16)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colorScheme.onPrimaryContainer
-                                        .withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  WalletCard(
+                    balance: _balance,
+                    isLoading: _isLoading,
+                    onRefresh: _getBalance,
+                    animation: _fadeAnimation,
                   ),
                   const SizedBox(height: 16),
                   FadeTransition(
@@ -327,14 +202,6 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
                       animation: _fadeAnimation,
                     ),
                   ),
-                  if (_errorMessage.isNotEmpty)
-                    FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: ErrorCard(
-                        message: _errorMessage,
-                        animation: _fadeAnimation,
-                      ),
-                    ),
                 ],
               ),
             ),
