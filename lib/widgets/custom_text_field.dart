@@ -2,22 +2,34 @@ import 'package:flutter/material.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
-  final String hintText;
+  final String? label;
+  final String? hint;
   final bool isValid;
   final String? validationMessage;
   final VoidCallback? onPaste;
   final String? Function(String)? validator;
   final bool obscureText;
+  final int? maxLines;
+  final IconData? prefixIcon;
+  final IconData? suffixIcon;
+  final VoidCallback? onSuffixIconPressed;
+  final bool isPassword;
 
   const CustomTextField({
     super.key,
     required this.controller,
-    required this.hintText,
+    this.label,
+    this.hint,
     required this.isValid,
     this.validationMessage,
     this.onPaste,
     this.validator,
     this.obscureText = false,
+    this.maxLines = 1,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.onSuffixIconPressed,
+    this.isPassword = false,
   });
 
   @override
@@ -29,9 +41,27 @@ class CustomTextField extends StatelessWidget {
       children: [
         TextField(
           controller: controller,
-          obscureText: obscureText,
+          obscureText: isPassword,
+          maxLines: maxLines,
           decoration: InputDecoration(
-            hintText: hintText,
+            labelText: label,
+            hintText: hint,
+            prefixIcon: prefixIcon != null
+                ? Icon(
+                    prefixIcon,
+                    color: isValid ? colorScheme.primary : colorScheme.outline,
+                  )
+                : null,
+            suffixIcon: suffixIcon != null
+                ? IconButton(
+                    icon: Icon(
+                      suffixIcon,
+                      color: isValid ? colorScheme.primary : colorScheme.outline,
+                    ),
+                    onPressed: onSuffixIconPressed ?? onPaste,
+                    tooltip: onSuffixIconPressed != null ? 'Paste from clipboard' : null,
+                  )
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: colorScheme.outline),
@@ -51,16 +81,6 @@ class CustomTextField extends StatelessWidget {
             ),
             filled: true,
             fillColor: colorScheme.surface,
-            suffixIcon: onPaste != null
-                ? IconButton(
-                    icon: Icon(
-                      Icons.paste,
-                      color: isValid ? colorScheme.primary : colorScheme.outline,
-                    ),
-                    onPressed: onPaste,
-                    tooltip: 'Paste from clipboard',
-                  )
-                : null,
           ),
         ),
         if (validationMessage != null) ...[

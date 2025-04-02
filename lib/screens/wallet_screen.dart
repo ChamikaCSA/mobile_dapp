@@ -22,13 +22,16 @@ class _WalletScreenState extends State<WalletScreen>
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _privateKeyController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _mnemonicController = TextEditingController();
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
+  late TabController _importTabController;
   bool _isWalletAddressValid = false;
   bool _isPrivateKeyValid = false;
+  bool _isMnemonicValid = false;
   List<WalletModel> _wallets = [];
 
   @override
@@ -44,7 +47,13 @@ class _WalletScreenState extends State<WalletScreen>
     _animationController.forward();
 
     _tabController = TabController(length: 3, vsync: this);
+    _importTabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    _importTabController.addListener(() {
       if (mounted) {
         setState(() {});
       }
@@ -52,6 +61,7 @@ class _WalletScreenState extends State<WalletScreen>
 
     _addressController.addListener(_validateWalletAddress);
     _privateKeyController.addListener(_validatePrivateKey);
+    _mnemonicController.addListener(_validateMnemonic);
     _nameController.addListener(() {
       setState(() {});
     });
@@ -134,16 +144,29 @@ class _WalletScreenState extends State<WalletScreen>
     }
   }
 
+  void _validateMnemonic() {
+    final isValid =
+        _walletService.isValidMnemonic(_mnemonicController.text.trim());
+    if (isValid != _isMnemonicValid) {
+      setState(() {
+        _isMnemonicValid = isValid;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _addressController.removeListener(_validateWalletAddress);
     _privateKeyController.removeListener(_validatePrivateKey);
+    _mnemonicController.removeListener(_validateMnemonic);
     _addressController.dispose();
     _privateKeyController.dispose();
+    _mnemonicController.dispose();
     _nameController.dispose();
     _walletService.dispose();
     _animationController.dispose();
     _tabController.dispose();
+    _importTabController.dispose();
     super.dispose();
   }
 
@@ -314,6 +337,72 @@ class _WalletScreenState extends State<WalletScreen>
     }
   }
 
+  Future<void> _importWalletFromMnemonic() async {
+    final mnemonic = _mnemonicController.text.trim();
+    final name = _nameController.text.trim();
+
+    if (!_isMnemonicValid) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Invalid mnemonic phrase',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    if (name.isEmpty) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Please enter a wallet name',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final wallet =
+          await _walletService.importWalletFromMnemonic(mnemonic, name);
+      await _loadWallets();
+
+      setState(() {
+        _isLoading = false;
+        _mnemonicController.clear();
+        _nameController.clear();
+      });
+
+      if (mounted) {
+        Navigator.pushNamed(
+          context,
+          '/wallet-details',
+          arguments: {
+            'address': wallet.address,
+            'isNewWallet': false,
+            'isOwnedWallet': true,
+          },
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
+    }
+  }
+
   Future<void> _pasteFromClipboard() async {
     final text = await ClipboardUtils.pasteFromClipboard();
     if (text != null) {
@@ -325,6 +414,13 @@ class _WalletScreenState extends State<WalletScreen>
     final text = await ClipboardUtils.pasteFromClipboard();
     if (text != null) {
       _privateKeyController.text = text;
+    }
+  }
+
+  Future<void> _pasteMnemonicFromClipboard() async {
+    final text = await ClipboardUtils.pasteFromClipboard();
+    if (text != null) {
+      _mnemonicController.text = text;
     }
   }
 
@@ -381,7 +477,7 @@ class _WalletScreenState extends State<WalletScreen>
                                 ],
                               ),
                               SizedBox(
-                                height: 300,
+                                height: 361,
                                 child: TabBarView(
                                   controller: _tabController,
                                   physics: const BouncingScrollPhysics(),
@@ -497,9 +593,11 @@ class _WalletScreenState extends State<WalletScreen>
         children: [
           CustomTextField(
             controller: _addressController,
-            hintText: 'Enter wallet address',
+            label: 'Wallet Address',
+            hint: 'Enter wallet address',
+            suffixIcon: Icons.paste,
+            onSuffixIconPressed: _pasteFromClipboard,
             isValid: _isWalletAddressValid,
-            onPaste: _pasteFromClipboard,
           ),
           CustomButton(
             onPressed:
@@ -515,30 +613,109 @@ class _WalletScreenState extends State<WalletScreen>
 
   Widget _buildImportWalletTab(ColorScheme colorScheme) {
     return CustomCard(
+      padding: EdgeInsets.symmetric(vertical: 20.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CustomTextField(
-            controller: _nameController,
-            hintText: 'Enter wallet name',
-            isValid: _nameController.text.isNotEmpty,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                CustomTextField(
+                  controller: _nameController,
+                  label: 'Wallet Name',
+                  hint: 'Enter a name for your wallet',
+                  isValid: _nameController.text.isNotEmpty,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TabBar(
+                        controller: _importTabController,
+                        labelColor: colorScheme.primary,
+                        unselectedLabelColor: colorScheme.onSurfaceVariant,
+                        indicatorColor: colorScheme.primary,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicatorWeight: 3,
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                        tabs: const [
+                          Tab(text: 'Private Key'),
+                          Tab(text: 'Mnemonic'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-          CustomTextField(
-            controller: _privateKeyController,
-            hintText: 'Enter private key',
-            isValid: _isPrivateKeyValid,
-            obscureText: true,
-            onPaste: _pastePrivateKeyFromClipboard,
-          ),
-          CustomButton(
-            onPressed: _isLoading ||
-                    !_isPrivateKeyValid ||
-                    _nameController.text.trim().isEmpty
-                ? null
-                : _importWallet,
-            isLoading: _isLoading,
-            text: 'Import Wallet',
-            icon: Icons.file_download,
+          Expanded(
+            child: TabBarView(
+              controller: _importTabController,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomTextField(
+                        controller: _privateKeyController,
+                        label: 'Private Key',
+                        hint: 'Enter your private key',
+                        suffixIcon: Icons.paste,
+                        onSuffixIconPressed: _pastePrivateKeyFromClipboard,
+                        isPassword: true,
+                        isValid: _isPrivateKeyValid,
+                      ),
+                      const Spacer(),
+                      CustomButton(
+                        onPressed: _isLoading ||
+                                !_isPrivateKeyValid ||
+                                _nameController.text.trim().isEmpty
+                            ? null
+                            : _importWallet,
+                        isLoading: _isLoading,
+                        text: 'Import Wallet',
+                        icon: Icons.file_upload,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomTextField(
+                        controller: _mnemonicController,
+                        label: 'Mnemonic Phrase',
+                        hint: 'Enter your mnemonic phrase',
+                        suffixIcon: Icons.paste,
+                        onSuffixIconPressed: _pasteMnemonicFromClipboard,
+                        maxLines: 3,
+                        isValid: _isMnemonicValid,
+                      ),
+                      const Spacer(),
+                      CustomButton(
+                        onPressed: _isLoading ||
+                                !_isMnemonicValid ||
+                                _nameController.text.trim().isEmpty
+                            ? null
+                            : _importWalletFromMnemonic,
+                        isLoading: _isLoading,
+                        text: 'Import Wallet',
+                        icon: Icons.file_upload,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -552,7 +729,8 @@ class _WalletScreenState extends State<WalletScreen>
         children: [
           CustomTextField(
             controller: _nameController,
-            hintText: 'Enter wallet name',
+            label: 'Wallet Name',
+            hint: 'Enter a name for your wallet',
             isValid: _nameController.text.isNotEmpty,
           ),
           CustomButton(

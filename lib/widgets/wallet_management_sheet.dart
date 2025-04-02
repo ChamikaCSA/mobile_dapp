@@ -254,7 +254,8 @@ class _WalletManagementSheetState extends State<WalletManagementSheet> {
                         children: _wallets.asMap().entries.map((entry) {
                           final index = entry.key;
                           final wallet = entry.value;
-                          final isLoading = _loadingStates[wallet.address] ?? false;
+                          final isLoading =
+                              _loadingStates[wallet.address] ?? false;
                           final balance = _balanceStates[wallet.address] ?? '0';
 
                           return Positioned(
@@ -275,18 +276,24 @@ class _WalletManagementSheetState extends State<WalletManagementSheet> {
                                   child: WalletCard(
                                     balance: balance,
                                     isLoading: isLoading,
-                                    onRefresh: () => _refreshBalance(wallet.address),
+                                    onRefresh: () =>
+                                        _refreshBalance(wallet.address),
                                     animation: widget.fadeAnimation,
                                     showNetwork: false,
                                     showLastUpdated: false,
-                                    title: wallet.name.isNotEmpty ? wallet.name : 'Unnamed Wallet',
+                                    title: wallet.name.isNotEmpty
+                                        ? wallet.name
+                                        : 'Unnamed Wallet',
                                     bottomContent: Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surface
+                                            .withOpacity(0.3),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
@@ -295,7 +302,10 @@ class _WalletManagementSheetState extends State<WalletManagementSheet> {
                                           Icon(
                                             Icons.account_balance_wallet,
                                             size: 16,
-                                            color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimaryContainer
+                                                .withOpacity(0.7),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
@@ -303,7 +313,10 @@ class _WalletManagementSheetState extends State<WalletManagementSheet> {
                                             style: TextStyle(
                                               fontFamily: 'monospace',
                                               fontSize: 12,
-                                              color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimaryContainer
+                                                  .withOpacity(0.7),
                                             ),
                                           ),
                                         ],
@@ -312,9 +325,12 @@ class _WalletManagementSheetState extends State<WalletManagementSheet> {
                                     actionButton: IconButton(
                                       icon: Icon(
                                         Icons.delete_outline,
-                                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer,
                                       ),
-                                      onPressed: () => _showDeleteConfirmation(context, wallet),
+                                      onPressed: () => _showDeleteConfirmation(
+                                          context, wallet),
                                       tooltip: 'Delete wallet',
                                       iconSize: 24,
                                     ),

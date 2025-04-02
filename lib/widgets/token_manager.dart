@@ -230,9 +230,12 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
                           children: [
                             CustomTextField(
                               controller: _tokenAddressController,
-                              hintText: 'Enter token contract address',
+                              label: 'Token Address',
+                              hint: 'Enter token contract address',
+                              prefixIcon: Icons.token,
+                              suffixIcon: Icons.paste,
+                              onSuffixIconPressed: _pasteFromClipboard,
                               isValid: _isTokenAddressValid,
-                              onPaste: _pasteFromClipboard,
                             ),
                             const SizedBox(height: 16),
                             SizedBox(

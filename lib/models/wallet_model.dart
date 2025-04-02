@@ -4,6 +4,7 @@ class WalletModel {
   final String name;
   final DateTime createdAt;
   final double? balance;
+  final String? mnemonic;
 
   WalletModel({
     required this.address,
@@ -11,6 +12,7 @@ class WalletModel {
     required this.name,
     required this.createdAt,
     this.balance,
+    this.mnemonic,
   });
 
   factory WalletModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class WalletModel {
       name: json['name'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       balance: json['balance'] != null ? (json['balance'] as num).toDouble() : null,
+      mnemonic: json['mnemonic'] as String?,
     );
   }
 
@@ -30,6 +33,7 @@ class WalletModel {
       'name': name,
       'createdAt': createdAt.toIso8601String(),
       'balance': balance,
+      'mnemonic': mnemonic,
     };
   }
 }

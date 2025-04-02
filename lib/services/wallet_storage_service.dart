@@ -13,10 +13,22 @@ class WalletStorageService {
       final String? walletsJson = _prefs.getString(_walletsKey);
       if (walletsJson == null) return [];
 
-      final List<dynamic> walletsList = json.decode(walletsJson) as List<dynamic>;
-      return walletsList.map((json) => WalletModel.fromJson(json as Map<String, dynamic>)).toList();
+      final List<dynamic> walletsList =
+          json.decode(walletsJson) as List<dynamic>;
+      return walletsList
+          .map((json) => WalletModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<WalletModel?> getWallet(String address) async {
+    try {
+      final wallets = await getWallets();
+      return wallets.firstWhere((w) => w.address == address);
+    } catch (e) {
+      return null;
     }
   }
 
@@ -42,15 +54,6 @@ class WalletStorageService {
       await _prefs.setString(_walletsKey, walletsJson);
     } catch (e) {
       throw Exception('Failed to delete wallet: $e');
-    }
-  }
-
-  Future<WalletModel?> getWallet(String address) async {
-    try {
-      final wallets = await getWallets();
-      return wallets.firstWhere((w) => w.address == address);
-    } catch (e) {
-      return null;
     }
   }
 }

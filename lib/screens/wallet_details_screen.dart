@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_dapp/services/wallet_service.dart';
 import 'package:mobile_dapp/widgets/custom_app_bar.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
-import 'package:mobile_dapp/widgets/private_key_dialog.dart';
+import 'package:mobile_dapp/widgets/wallet_secrets_dialog.dart';
 import 'package:mobile_dapp/widgets/token_manager.dart';
 import 'package:mobile_dapp/widgets/wallet_card.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
@@ -94,13 +94,17 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
   Future<void> _showPrivateKeyDialog() async {
     try {
       final privateKey = await _walletService.getPrivateKey(widget.address);
+      final wallet = await _walletService.getWallet(widget.address);
       if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-        builder: (context) => PrivateKeyDialog(privateKey: privateKey.privateKeyInt.toRadixString(16).padLeft(64, '0')),
-    );
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WalletSecretsDialog(
+          privateKey: privateKey.privateKeyInt.toRadixString(16).padLeft(64, '0'),
+          mnemonic: wallet?.mnemonic,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         CustomSnackBar.show(
