@@ -11,14 +11,14 @@ import 'dart:async';
 
 class WalletDetailsScreen extends StatefulWidget {
   final String address;
-  final String? privateKey;
   final bool isNewWallet;
+  final bool isOwnedWallet;
 
   const WalletDetailsScreen({
     super.key,
     required this.address,
-    this.privateKey,
     this.isNewWallet = false,
+    this.isOwnedWallet = false,
   });
 
   @override
@@ -47,7 +47,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
 
     _getBalance();
 
-    if (widget.privateKey != null && widget.isNewWallet) {
+    if (widget.isNewWallet) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showPrivateKeyDialog();
       });
@@ -91,12 +91,25 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
     ClipboardUtils.copyToClipboard(context, widget.address);
   }
 
-  void _showPrivateKeyDialog() {
+  Future<void> _showPrivateKeyDialog() async {
+    try {
+      final privateKey = await _walletService.getPrivateKey(widget.address);
+      if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PrivateKeyDialog(privateKey: widget.privateKey!),
+        builder: (context) => PrivateKeyDialog(privateKey: privateKey.privateKeyInt.toRadixString(16).padLeft(64, '0')),
     );
+    } catch (e) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
+    }
   }
 
   @override
@@ -145,16 +158,14 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
                               ),
                               Row(
                                 children: [
-                                  if (widget.privateKey != null)
+                                  if (widget.isOwnedWallet)
                                     IconButton(
-                                      icon: Icon(Icons.key,
-                                          color: colorScheme.primary),
+                                      icon: Icon(Icons.key, color: colorScheme.tertiary),
                                       onPressed: _showPrivateKeyDialog,
-                                      tooltip: 'Access private key',
+                                      tooltip: 'Show private key',
                                     ),
                                   IconButton(
-                                    icon: Icon(Icons.copy,
-                                        color: colorScheme.onSurface),
+                                    icon: Icon(Icons.copy, color: colorScheme.onSurface),
                                     onPressed: _copyAddress,
                                     tooltip: 'Copy address',
                                   ),

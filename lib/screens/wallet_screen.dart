@@ -104,8 +104,8 @@ class _WalletScreenState extends State<WalletScreen>
             '/wallet-details',
             arguments: {
               'address': wallet.address,
-              'privateKey': wallet.privateKey,
               'isNewWallet': false,
+              'isOwnedWallet': true,
             },
           );
         },
@@ -177,8 +177,8 @@ class _WalletScreenState extends State<WalletScreen>
           '/wallet-details',
           arguments: {
             'address': address,
-            'privateKey': null,
             'isNewWallet': false,
+            'isOwnedWallet': false,
           },
         );
       }
@@ -243,8 +243,8 @@ class _WalletScreenState extends State<WalletScreen>
           '/wallet-details',
           arguments: {
             'address': wallet.address,
-            'privateKey': wallet.privateKey,
             'isNewWallet': false,
+            'isOwnedWallet': true,
           },
         );
       }
@@ -295,8 +295,8 @@ class _WalletScreenState extends State<WalletScreen>
           '/wallet-details',
           arguments: {
             'address': wallet.address,
-            'privateKey': wallet.privateKey,
             'isNewWallet': true,
+            'isOwnedWallet': true,
           },
         );
       }

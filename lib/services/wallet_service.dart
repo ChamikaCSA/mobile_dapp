@@ -9,6 +9,7 @@ class WalletService extends BaseService {
   late final WalletStorageService _storageService;
   bool _isInitialized = false;
   Future<void>? _initFuture;
+  final String _walletPassword = 'Ua3cPOLzW3kWx9KQpuQ'; // TODO: Implement proper password management
 
   WalletService() {
     _initFuture = _initStorage();
@@ -58,15 +59,21 @@ class WalletService extends BaseService {
       await _ensureInitialized();
       final credentials = EthPrivateKey.fromHex(privateKey);
 
-      final wallet = WalletModel(
+      final wallet = Wallet.createNew(
+        credentials,
+        _walletPassword,
+        Random.secure(),
+      );
+
+      final walletModel = WalletModel(
         address: credentials.address.hex,
-        privateKey: privateKey,
+        encryptedData: wallet.toJson(),
         name: name,
         createdAt: DateTime.now(),
       );
 
-      await _storageService.saveWallet(wallet);
-      return wallet;
+      await _storageService.saveWallet(walletModel);
+      return walletModel;
     } catch (e) {
       throw Exception('Failed to import wallet: $e');
     }
@@ -77,17 +84,38 @@ class WalletService extends BaseService {
       await _ensureInitialized();
       final credentials = EthPrivateKey.createRandom(Random.secure());
 
-      final wallet = WalletModel(
+      final wallet = Wallet.createNew(
+        credentials,
+        _walletPassword,
+        Random.secure(),
+      );
+
+      final walletModel = WalletModel(
         address: credentials.address.hex,
-        privateKey: credentials.privateKeyInt.toRadixString(16).padLeft(64, '0'),
+        encryptedData: wallet.toJson(),
         name: name,
         createdAt: DateTime.now(),
       );
 
-      await _storageService.saveWallet(wallet);
-      return wallet;
+      await _storageService.saveWallet(walletModel);
+      return walletModel;
     } catch (e) {
       throw Exception('Failed to create wallet: $e');
+    }
+  }
+
+  Future<EthPrivateKey> getPrivateKey(String address) async {
+    try {
+      await _ensureInitialized();
+      final walletModel = await _storageService.getWallet(address);
+      if (walletModel == null) {
+        throw Exception('Wallet not found');
+      }
+
+      final wallet = Wallet.fromJson(walletModel.encryptedData, _walletPassword);
+      return wallet.privateKey;
+    } catch (e) {
+      throw Exception('Failed to get private key: $e');
     }
   }
 

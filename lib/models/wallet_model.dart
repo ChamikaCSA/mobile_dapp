@@ -1,13 +1,13 @@
 class WalletModel {
   final String address;
-  final String privateKey;
+  final String encryptedData;
   final String name;
   final DateTime createdAt;
   final double? balance;
 
   WalletModel({
     required this.address,
-    required this.privateKey,
+    required this.encryptedData,
     required this.name,
     required this.createdAt,
     this.balance,
@@ -16,7 +16,7 @@ class WalletModel {
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     return WalletModel(
       address: json['address'] as String,
-      privateKey: json['privateKey'] as String,
+      encryptedData: json['encryptedData'] as String,
       name: json['name'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       balance: json['balance'] != null ? (json['balance'] as num).toDouble() : null,
@@ -26,7 +26,7 @@ class WalletModel {
   Map<String, dynamic> toJson() {
     return {
       'address': address,
-      'privateKey': privateKey,
+      'encryptedData': encryptedData,
       'name': name,
       'createdAt': createdAt.toIso8601String(),
       'balance': balance,

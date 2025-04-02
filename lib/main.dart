@@ -38,8 +38,8 @@ class MainApp extends StatelessWidget {
           return CustomPageRoute(
             child: WalletDetailsScreen(
               address: args['address'] as String,
-              privateKey: args['privateKey'] as String?,
               isNewWallet: args['isNewWallet'] as bool? ?? false,
+              isOwnedWallet: args['isOwnedWallet'] as bool? ?? false,
             ),
           );
         }
