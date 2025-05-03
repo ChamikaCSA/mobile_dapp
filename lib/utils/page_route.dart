@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_dapp/utils/animation_constants.dart';
 
 class CustomPageRoute<T> extends PageRouteBuilder<T> {
   final Widget child;
@@ -7,11 +8,10 @@ class CustomPageRoute<T> extends PageRouteBuilder<T> {
       : super(
           pageBuilder: (context, animation, secondaryAnimation) => child,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const curve = Curves.easeInOutCubic;
-
+            final config = AnimationConfigs.pageTransition;
             var fadeAnimation = animation.drive(
               Tween<double>(begin: 0.0, end: 1.0).chain(
-                CurveTween(curve: curve),
+                CurveTween(curve: config.curve),
               ),
             );
 
@@ -20,7 +20,7 @@ class CustomPageRoute<T> extends PageRouteBuilder<T> {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 400),
+          transitionDuration: AnimationConfigs.pageTransition.duration,
+          reverseTransitionDuration: AnimationConfigs.pageTransition.duration,
         );
 }

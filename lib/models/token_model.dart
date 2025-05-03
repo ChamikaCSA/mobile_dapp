@@ -4,6 +4,7 @@ class TokenModel {
   final String name;
   final int decimals;
   final String balance;
+  final bool isNative;
 
   TokenModel({
     required this.address,
@@ -11,6 +12,7 @@ class TokenModel {
     required this.name,
     required this.decimals,
     required this.balance,
+    this.isNative = false,
   });
 
   factory TokenModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class TokenModel {
       name: json['name'] as String,
       decimals: json['decimals'] as int,
       balance: json['balance'] as String,
+      isNative: json['isNative'] as bool? ?? false,
     );
   }
 
@@ -30,6 +33,18 @@ class TokenModel {
       'name': name,
       'decimals': decimals,
       'balance': balance,
+      'isNative': isNative,
     };
+  }
+
+  static TokenModel nativeEth(String balance) {
+    return TokenModel(
+      address: '0x0000000000000000000000000000000000000000',
+      symbol: 'SepoliaETH',
+      name: 'Sepolia',
+      decimals: 18,
+      balance: balance,
+      isNative: true,
+    );
   }
 }

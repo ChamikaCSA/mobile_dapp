@@ -3,6 +3,7 @@ import 'package:mobile_dapp/utils/clipboard_utils.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
 import 'package:mobile_dapp/utils/dialog_transition.dart';
 import 'dart:async';
+import 'package:mobile_dapp/utils/animation_constants.dart';
 
 class WalletSecretsDialog extends StatefulWidget {
   final String privateKey;
@@ -33,25 +34,25 @@ class _WalletSecretsDialogState extends State<WalletSecretsDialog> with TickerPr
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: AnimationConfigs.pulseAnimation.duration,
       vsync: this,
     )..repeat(reverse: true);
 
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(
         parent: _pulseController,
-        curve: Curves.easeInOut,
+        curve: AnimationConfigs.pulseAnimation.curve,
       ),
     );
 
     _dialogController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: AnimationConfigs.dialogTransition.duration,
       vsync: this,
     );
 
     _dialogAnimation = CurvedAnimation(
       parent: _dialogController,
-      curve: Curves.easeInOut,
+      curve: AnimationConfigs.dialogTransition.curve,
     );
 
     _dialogController.forward();

@@ -1,5 +1,6 @@
 import 'package:web3dart/web3dart.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import '../models/token_model.dart';
 import 'base_service.dart';
 
@@ -101,9 +102,16 @@ class TokenService extends BaseService {
         params: [EthereumAddress.fromHex(walletAddress)],
       );
 
-      return (balance.first as BigInt).toString();
+      final tokenInfo = await getTokenInfo(tokenAddress);
+      return formatTokenBalance(balance.first as BigInt, tokenInfo.decimals);
     } catch (e) {
       throw Exception('Failed to get token balance: $e');
     }
+  }
+
+  String formatTokenBalance(BigInt balance, int decimals) {
+    final balanceInEther = balance / BigInt.from(10).pow(decimals);
+    final double balanceDouble = double.parse(balanceInEther.toString());
+    return NumberFormat('#,##0.0000', 'en_US').format(balanceDouble);
   }
 }

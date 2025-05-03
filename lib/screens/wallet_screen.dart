@@ -9,6 +9,7 @@ import 'package:mobile_dapp/widgets/wallet_management_sheet.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
 import 'package:mobile_dapp/widgets/custom_snackbar.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
+import 'package:mobile_dapp/utils/animation_constants.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -38,11 +39,14 @@ class _WalletScreenState extends State<WalletScreen>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: AnimationConfigs.fadeTransition.duration,
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _animationController,
+        curve: AnimationConfigs.fadeTransition.curve,
+      ),
     );
     _animationController.forward();
 
@@ -483,18 +487,15 @@ class _WalletScreenState extends State<WalletScreen>
                                   physics: const BouncingScrollPhysics(),
                                   children: [
                                     AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 300),
+                                      duration: AnimationConfigs.fadeTransition.duration,
                                       child: _buildCheckBalanceTab(colorScheme),
                                     ),
                                     AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 300),
+                                      duration: AnimationConfigs.fadeTransition.duration,
                                       child: _buildImportWalletTab(colorScheme),
                                     ),
                                     AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 300),
+                                      duration: AnimationConfigs.fadeTransition.duration,
                                       child: _buildCreateWalletTab(colorScheme),
                                     ),
                                   ],

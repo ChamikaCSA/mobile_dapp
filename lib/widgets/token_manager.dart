@@ -6,7 +6,9 @@ import 'package:mobile_dapp/widgets/custom_text_field.dart';
 import 'package:mobile_dapp/widgets/custom_button.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
 import 'package:mobile_dapp/widgets/custom_snackbar.dart';
-import 'dart:math';
+import 'package:mobile_dapp/services/wallet_service.dart';
+import 'package:mobile_dapp/widgets/custom_list_tile.dart';
+import 'package:mobile_dapp/utils/animation_constants.dart';
 
 class TokenManager extends StatefulWidget {
   final String walletAddress;
@@ -25,6 +27,7 @@ class TokenManager extends StatefulWidget {
 class _TokenManagerState extends State<TokenManager> with TickerProviderStateMixin {
   final TextEditingController _tokenAddressController = TextEditingController();
   final TokenService _tokenService = TokenService();
+  final WalletService _walletService = WalletService();
   bool _isTokenAddressValid = false;
   final List<TokenModel> _tokens = [];
   bool _isLoadingToken = false;
@@ -32,6 +35,8 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
   late Animation<Offset> _slideAnimation;
   late AnimationController _expandController;
   late Animation<double> _expandAnimation;
+  late AnimationController _listAnimationController;
+  late Animation<double> _listAnimation;
   bool _isExpanded = false;
 
   @override
@@ -39,11 +44,15 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
     super.initState();
     _tokenAddressController.addListener(_validateTokenAddress);
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: AnimationConfigs.slideTransition.duration,
       vsync: this,
     );
     _expandController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: AnimationConfigs.fadeTransition.duration,
+      vsync: this,
+    );
+    _listAnimationController = AnimationController(
+      duration: AnimationConfigs.fadeTransition.duration,
       vsync: this,
     );
     _slideAnimation = Tween<Offset>(
@@ -51,16 +60,49 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _slideController,
-      curve: Curves.easeOutCubic,
+      curve: AnimationConfigs.slideTransition.curve,
     ));
     _expandAnimation = Tween<double>(
       begin: 0,
       end: 1,
     ).animate(CurvedAnimation(
       parent: _expandController,
-      curve: Curves.easeInOut,
+      curve: AnimationConfigs.fadeTransition.curve,
+    ));
+    _listAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _listAnimationController,
+      curve: AnimationConfigs.fadeTransition.curve,
     ));
     _slideController.forward();
+    _listAnimationController.forward();
+    _loadNativeEthBalance();
+  }
+
+  Future<void> _loadNativeEthBalance() async {
+    try {
+      final balance = await _walletService.getBalance(widget.walletAddress);
+      final formattedBalance = _walletService.formatBalance(balance);
+      setState(() {
+        _tokens.insert(0, TokenModel.nativeEth(formattedBalance));
+      });
+      _animateList();
+    } catch (e) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Failed to load ETH balance: $e',
+          isError: true,
+        );
+      }
+    }
+  }
+
+  void _animateList() {
+    _listAnimationController.reset();
+    _listAnimationController.forward();
   }
 
   void _validateTokenAddress() {
@@ -80,6 +122,7 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
     _tokenService.dispose();
     _slideController.dispose();
     _expandController.dispose();
+    _listAnimationController.dispose();
     super.dispose();
   }
 
@@ -122,6 +165,7 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
       _tokenAddressController.clear();
       _slideController.reset();
       _slideController.forward();
+      _animateList();
     } catch (e) {
       setState(() {
         _isLoadingToken = false;
@@ -187,34 +231,21 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Token Management',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                                Text(
-                                  '${_tokens.length} tokens',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: colorScheme.onSurface.withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              'Tokens',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onPrimaryContainer,
+                              ),
                             ),
                           ],
                         ),
-                        RotationTransition(
-                          turns: _expandAnimation,
-                          child: Icon(
-                            Icons.expand_more,
-                            color: colorScheme.onSurface,
-                          ),
+                        Icon(
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: colorScheme.onPrimaryContainer,
                         ),
                       ],
                     ),
@@ -223,33 +254,23 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
                     sizeFactor: _expandAnimation,
                     child: Column(
                       children: [
-                        const Divider(
-                          height: 40,
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _tokenAddressController,
+                          label: 'Token Contract Address',
+                          hint: 'Enter token contract address',
+                          suffixIcon: Icons.paste,
+                          onSuffixIconPressed: _pasteFromClipboard,
+                          isValid: _isTokenAddressValid,
                         ),
-                        Column(
-                          children: [
-                            CustomTextField(
-                              controller: _tokenAddressController,
-                              label: 'Token Address',
-                              hint: 'Enter token contract address',
-                              prefixIcon: Icons.token,
-                              suffixIcon: Icons.paste,
-                              onSuffixIconPressed: _pasteFromClipboard,
-                              isValid: _isTokenAddressValid,
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: CustomButton(
-                                onPressed: _isLoadingToken || !_isTokenAddressValid
-                                    ? null
-                                    : _importToken,
-                                isLoading: _isLoadingToken,
-                                text: 'Import Token',
-                                icon: Icons.add_circle_outline,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 16),
+                        CustomButton(
+                          onPressed: _isLoadingToken || !_isTokenAddressValid
+                              ? null
+                              : _importToken,
+                          isLoading: _isLoadingToken,
+                          text: 'Import Token',
+                          icon: Icons.add,
                         ),
                       ],
                     ),
@@ -259,100 +280,54 @@ class _TokenManagerState extends State<TokenManager> with TickerProviderStateMix
             ),
           ),
         ),
-        if (_tokens.isNotEmpty) ...[
-          const SizedBox(height: 16),
+        if (_tokens.isNotEmpty)
           FadeTransition(
-            opacity: widget.animation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: CustomCard(
-                usePrimaryGradient: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Tokens',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer,
+            opacity: _listAnimation,
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _tokens.length,
+              itemBuilder: (context, index) {
+                final token = _tokens[index];
+                final delay = index * 0.1;
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.1),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: _listAnimationController,
+                    curve: Interval(
+                      delay,
+                      delay + 0.3,
+                      curve: AnimationConfigs.slideTransition.curve,
+                    ),
+                  )),
+                  child: FadeTransition(
+                    opacity: Tween<double>(
+                      begin: 0.0,
+                      end: 1.0,
+                    ).animate(CurvedAnimation(
+                      parent: _listAnimationController,
+                      curve: Interval(
+                        delay,
+                        delay + 0.3,
+                        curve: AnimationConfigs.fadeTransition.curve,
                       ),
+                    )),
+                    child: CustomListTile(
+                      title: token.name,
+                      subtitle: token.symbol,
+                      leadingText: token.symbol,
+                      trailingText: token.balance,
+                      trailingSubtext: token.symbol,
+                      usePrimaryGradient: true,
                     ),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _tokens.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final token = _tokens[index];
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.onPrimaryContainer.withAlpha(26),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: colorScheme.onPrimaryContainer.withAlpha(52),
-                              width: 1,
-                            ),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            leading: CircleAvatar(
-                              backgroundColor: colorScheme.primary.withOpacity(0.1),
-                              child: Text(
-                                token.symbol[0].toUpperCase(),
-                                style: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              token.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                            subtitle: Text(
-                              token.symbol,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: colorScheme.onPrimaryContainer.withOpacity(0.7),
-                              ),
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  (BigInt.parse(token.balance) / BigInt.from(pow(10, token.decimals))).toStringAsFixed(4).replaceAll(RegExp(r'\.?0*$'), ''),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                                Text(
-                                  token.symbol,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colorScheme.onPrimaryContainer.withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
-        ],
       ],
     );
   }
