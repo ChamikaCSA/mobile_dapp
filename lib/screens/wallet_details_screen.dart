@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_dapp/services/wallet_service.dart';
+import 'package:mobile_dapp/services/token_service.dart';
+import 'package:mobile_dapp/models/token_model.dart';
 import 'package:mobile_dapp/widgets/custom_app_bar.dart';
 import 'package:mobile_dapp/widgets/custom_card.dart';
 import 'package:mobile_dapp/widgets/wallet_secrets_dialog.dart';
-import 'package:mobile_dapp/widgets/token_manager.dart';
 import 'package:mobile_dapp/widgets/wallet_card.dart';
+import 'package:mobile_dapp/widgets/custom_text_field.dart';
+import 'package:mobile_dapp/widgets/custom_button.dart';
+import 'package:mobile_dapp/widgets/custom_list_tile.dart';
 import 'package:mobile_dapp/utils/clipboard_utils.dart';
 import 'package:mobile_dapp/widgets/custom_snackbar.dart';
+import 'package:mobile_dapp/utils/animation_constants.dart';
+import 'package:mobile_dapp/screens/send_token_screen.dart';
 import 'dart:async';
 
 class WalletDetailsScreen extends StatefulWidget {
@@ -26,16 +32,31 @@ class WalletDetailsScreen extends StatefulWidget {
 }
 
 class _WalletDetailsScreenState extends State<WalletDetailsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final WalletService _walletService = WalletService();
+  final TokenService _tokenService = TokenService();
+  final TextEditingController _tokenAddressController = TextEditingController();
   String _balance = '';
   bool _isLoading = false;
+  bool _isTokenAddressValid = false;
+  final List<TokenModel> _tokens = [];
+  bool _isLoadingToken = false;
+  bool _isExpanded = false;
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  late AnimationController _expandController;
+  late Animation<double> _expandAnimation;
+  late AnimationController _listAnimationController;
+  late Animation<double> _listAnimation;
 
   @override
   void initState() {
     super.initState();
+    _tokenAddressController.addListener(_validateTokenAddress);
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -43,7 +64,47 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+
+    _slideController = AnimationController(
+      duration: AnimationConfigs.slideTransition.duration,
+      vsync: this,
+    );
+    _expandController = AnimationController(
+      duration: AnimationConfigs.fadeTransition.duration,
+      vsync: this,
+    );
+    _listAnimationController = AnimationController(
+      duration: AnimationConfigs.fadeTransition.duration,
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: AnimationConfigs.slideTransition.curve,
+    ));
+
+    _expandAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _expandController,
+      curve: AnimationConfigs.fadeTransition.curve,
+    ));
+
+    _listAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _listAnimationController,
+      curve: AnimationConfigs.fadeTransition.curve,
+    ));
+
     _animationController.forward();
+    _slideController.forward();
+    _listAnimationController.forward();
 
     _getBalance();
 
@@ -57,7 +118,13 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
   @override
   void dispose() {
     _walletService.dispose();
+    _tokenService.dispose();
+    _tokenAddressController.removeListener(_validateTokenAddress);
+    _tokenAddressController.dispose();
     _animationController.dispose();
+    _slideController.dispose();
+    _expandController.dispose();
+    _listAnimationController.dispose();
     super.dispose();
   }
 
@@ -68,10 +135,21 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
 
     try {
       final balance = await _walletService.getBalance(widget.address);
+      final formattedBalance = _walletService.formatBalance(balance);
+
       setState(() {
-        _balance = _walletService.formatBalance(balance);
+        _balance = formattedBalance;
         _isLoading = false;
+
+        final nativeEthIndex = _tokens.indexWhere((token) => token.isNative);
+        if (nativeEthIndex >= 0) {
+          _tokens[nativeEthIndex] = TokenModel.nativeEth(formattedBalance);
+        } else {
+          _tokens.insert(0, TokenModel.nativeEth(formattedBalance));
+        }
       });
+
+      _animateList();
     } catch (e) {
       setState(() {
         _balance = '';
@@ -85,6 +163,91 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
         );
       }
     }
+  }
+
+  void _animateList() {
+    _listAnimationController.reset();
+    _listAnimationController.forward();
+  }
+
+  void _validateTokenAddress() {
+    final isValid = _tokenService.isValidAddress(_tokenAddressController.text.trim());
+    if (isValid != _isTokenAddressValid) {
+      setState(() {
+        _isTokenAddressValid = isValid;
+      });
+    }
+  }
+
+  Future<void> _importToken() async {
+    final tokenAddress = _tokenAddressController.text.trim();
+
+    if (!_isTokenAddressValid) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'Invalid token contract address',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoadingToken = true;
+    });
+
+    try {
+      final tokenInfo = await _tokenService.getTokenInfo(tokenAddress);
+      final balance = await _tokenService.getTokenBalance(tokenAddress, widget.address);
+
+      final token = TokenModel(
+        address: tokenInfo.address,
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol,
+        decimals: tokenInfo.decimals,
+        balance: balance,
+      );
+
+      setState(() {
+        _tokens.add(token);
+        _isLoadingToken = false;
+      });
+
+      _tokenAddressController.clear();
+      _slideController.reset();
+      _slideController.forward();
+      _animateList();
+    } catch (e) {
+      setState(() {
+        _isLoadingToken = false;
+      });
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: e.toString(),
+          isError: true,
+        );
+      }
+    }
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final text = await ClipboardUtils.pasteFromClipboard();
+    if (text != null) {
+      _tokenAddressController.text = text;
+    }
+  }
+
+  void _toggleExpand() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _expandController.forward();
+      } else {
+        _expandController.reverse();
+      }
+    });
   }
 
   void _copyAddress() {
@@ -113,6 +276,33 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
           isError: true,
         );
       }
+    }
+  }
+
+  Future<void> _showSendTokenDialog(TokenModel token) async {
+    if (!widget.isOwnedWallet) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: 'You can only send tokens from wallets you own',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    final txHash = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SendTokenScreen(
+          token: token,
+          fromAddress: widget.address,
+        ),
+      ),
+    );
+
+    if (txHash != null && mounted) {
+      _getBalance();
     }
   }
 
@@ -212,11 +402,128 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen>
                   const SizedBox(height: 16),
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: TokenManager(
-                      walletAddress: widget.address,
-                      animation: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: CustomCard(
+                        child: Column(
+                          children: [
+                            InkWell(
+                              onTap: _toggleExpand,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primary.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          Icons.token,
+                                          color: colorScheme.primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Tokens',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.onPrimaryContainer,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    _isExpanded
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    color: colorScheme.onPrimaryContainer,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizeTransition(
+                              sizeFactor: _expandAnimation,
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 16),
+                                  CustomTextField(
+                                    controller: _tokenAddressController,
+                                    label: 'Token Contract Address',
+                                    hint: 'Enter token contract address',
+                                    suffixIcon: Icons.paste,
+                                    onSuffixIconPressed: _pasteFromClipboard,
+                                    isValid: _isTokenAddressValid,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  CustomButton(
+                                    onPressed: _isLoadingToken || !_isTokenAddressValid
+                                        ? null
+                                        : _importToken,
+                                    isLoading: _isLoadingToken,
+                                    text: 'Import Token',
+                                    icon: Icons.add,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
+                  if (_tokens.isNotEmpty)
+                    FadeTransition(
+                      opacity: _listAnimation,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _tokens.length,
+                        itemBuilder: (context, index) {
+                          final token = _tokens[index];
+                          final delay = index * 0.1;
+                          return SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.1),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: _listAnimationController,
+                              curve: Interval(
+                                delay,
+                                delay + 0.3,
+                                curve: AnimationConfigs.slideTransition.curve,
+                              ),
+                            )),
+                            child: FadeTransition(
+                              opacity: Tween<double>(
+                                begin: 0.0,
+                                end: 1.0,
+                              ).animate(CurvedAnimation(
+                                parent: _listAnimationController,
+                                curve: Interval(
+                                  delay,
+                                  delay + 0.3,
+                                  curve: AnimationConfigs.fadeTransition.curve,
+                                ),
+                              )),
+                              child: CustomListTile(
+                                title: token.name,
+                                subtitle: token.symbol,
+                                leadingText: token.symbol,
+                                trailingText: token.balance,
+                                trailingSubtext: token.symbol,
+                                usePrimaryGradient: true,
+                                onTap: () => _showSendTokenDialog(token),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),

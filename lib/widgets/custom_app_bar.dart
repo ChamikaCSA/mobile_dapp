@@ -43,11 +43,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
           ),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 80,
-              color: colorScheme.primary,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 50),
+              child: Icon(
+                icon,
+                size: 80,
+                color: colorScheme.primary,
+              ),
             ),
           ),
         ),

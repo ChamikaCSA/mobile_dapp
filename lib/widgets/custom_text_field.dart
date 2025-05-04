@@ -14,6 +14,7 @@ class CustomTextField extends StatelessWidget {
   final IconData? suffixIcon;
   final VoidCallback? onSuffixIconPressed;
   final bool isPassword;
+  final TextInputType? keyboardType;
 
   const CustomTextField({
     super.key,
@@ -30,6 +31,7 @@ class CustomTextField extends StatelessWidget {
     this.suffixIcon,
     this.onSuffixIconPressed,
     this.isPassword = false,
+    this.keyboardType,
   });
 
   @override
@@ -43,6 +45,7 @@ class CustomTextField extends StatelessWidget {
           controller: controller,
           obscureText: isPassword,
           maxLines: maxLines,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             labelText: label,
             hintText: hint,

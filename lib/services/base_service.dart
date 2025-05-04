@@ -2,7 +2,8 @@ import 'package:http/http.dart' as http;
 import 'package:web3dart/web3dart.dart';
 
 abstract class BaseService {
-  final String _rpcUrl = 'https://sepolia.infura.io/v3/38ea86d41a0d4ed58fa0fb3a846b81a1';
+  static const String _infuraApiKey = '38ea86d41a0d4ed58fa0fb3a846b81a1';
+  static const String _rpcUrl = 'https://sepolia.infura.io/v3/$_infuraApiKey';
   late Web3Client _web3client;
 
   BaseService() {

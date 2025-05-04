@@ -9,12 +9,13 @@ import 'package:hex/hex.dart';
 import 'base_service.dart';
 
 class WalletService extends BaseService {
+  static const String _walletPassword = 'Ua3cPOLzW3kWx9KQpuQ'; // TODO: Implement proper password management
+  static const String _derivationPath = "m/44'/60'/0'/0/0"; // BIP44 standard path for Ethereum
+  static const int _balanceDecimals = 4;
+
   late final WalletStorageService _storageService;
   bool _isInitialized = false;
   Future<void>? _initFuture;
-  
-  final String _walletPassword = 'Ua3cPOLzW3kWx9KQpuQ'; // TODO: Implement proper password management
-  static const String _derivationPath = "m/44'/60'/0'/0/0"; // BIP44 standard path for Ethereum
 
   WalletService() {
     _initFuture = _initStorage();
@@ -45,9 +46,9 @@ class WalletService extends BaseService {
   }
 
   String formatBalance(EtherAmount balance) {
-    return balance.getValueInUnit(EtherUnit.ether).toStringAsFixed(4);
+    return balance.getValueInUnit(EtherUnit.ether).toStringAsFixed(_balanceDecimals);
   }
-  
+
   bool isValidPrivateKey(String privateKey) {
     if (privateKey.isEmpty) return false;
 
@@ -62,7 +63,7 @@ class WalletService extends BaseService {
   bool isValidMnemonic(String mnemonic) {
     return bip39.validateMnemonic(mnemonic);
   }
-  
+
   Future<WalletModel> importWallet(String privateKey, String name) async {
     try {
       await _ensureInitialized();
@@ -73,7 +74,7 @@ class WalletService extends BaseService {
         _walletPassword,
         Random.secure(),
       );
-      
+
       final walletModel = WalletModel(
         address: credentials.address.hex,
         encryptedData: wallet.toJson(),
@@ -87,7 +88,7 @@ class WalletService extends BaseService {
       throw Exception('Failed to import wallet: $e');
     }
   }
-  
+
   Future<WalletModel> importWalletFromMnemonic(
       String mnemonic, String name) async {
     try {
@@ -96,7 +97,7 @@ class WalletService extends BaseService {
       if (!isValidMnemonic(mnemonic)) {
         throw Exception('Invalid mnemonic phrase');
       }
-      
+
       return _createWalletFromMnemonic(mnemonic, name);
     } catch (e) {
       throw Exception('Failed to import wallet from mnemonic: $e');
@@ -113,17 +114,17 @@ class WalletService extends BaseService {
       throw Exception('Failed to create wallet: $e');
     }
   }
-  
+
   Future<WalletModel> _createWalletFromMnemonic(String mnemonic, String name) async {
     try {
       final credentials = derivePrivateKey(mnemonic);
-      
+
       final wallet = Wallet.createNew(
         credentials,
         _walletPassword,
         Random.secure(),
       );
-      
+
       final walletModel = WalletModel(
         address: credentials.address.hex,
         encryptedData: wallet.toJson(),
@@ -131,7 +132,7 @@ class WalletService extends BaseService {
         createdAt: DateTime.now(),
         mnemonic: mnemonic,
       );
-      
+
       await _storageService.saveWallet(walletModel);
       return walletModel;
     } catch (e) {
@@ -142,9 +143,9 @@ class WalletService extends BaseService {
     EthPrivateKey derivePrivateKey(String mnemonic) {
     final seed = bip39.mnemonicToSeed(mnemonic);
     final root = bip32.BIP32.fromSeed(seed);
-    
+
     final child = root.derivePath(_derivationPath);
-    
+
     final privateKey = HEX.encode(child.privateKey!);
     return EthPrivateKey.fromHex(privateKey);
   }
@@ -158,12 +159,12 @@ class WalletService extends BaseService {
     await _ensureInitialized();
     return _storageService.getWallet(address);
   }
-  
+
   Future<void> deleteWallet(String address) async {
     await _ensureInitialized();
     await _storageService.deleteWallet(address);
   }
-  
+
   Future<EthPrivateKey> getPrivateKey(String address) async {
     try {
       await _ensureInitialized();
